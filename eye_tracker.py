@@ -1,6 +1,7 @@
 import psychopy
 from psychopy import gui, core
 import os, time
+import subprocess
 
 # --- experiment info --------------------------------
 date    = time.strftime("%m_%d")
