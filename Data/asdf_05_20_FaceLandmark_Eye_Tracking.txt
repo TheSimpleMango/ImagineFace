@@ -1,0 +1,11 @@
+1747762983.7935202	EXPERIMENT_MARKER: Eye tracking started
+1747762983.825522	EXPERIMENT_MARKER: Landmark questions started
+1747762984.4855196	TobiiStream v2.0.3
+1747762984.4855196	
+1747762984.5475194	SUCCESS: The connection to the GazeTrack Processing library has been correctly set up!
+1747762984.5475194	
+1747762984.589519	
+1747762984.6205192	Unhandled Exception: System.InvalidOperationException: Cannot read keys when either application does not have a console or when console input has been redirected from a file. Try Console.Read.
+1747762984.6215198	at System.Console.ReadKey(Boolean intercept)
+1747762984.6215198	at TobiiStream.Program.Main(String[] args) in C:\Users\Augusto\Documents\gazetrack\TobiiStream\TobiiStream\Program.cs:line 78
+1747762994.7126868	EXPERIMENT_MARKER: Eye tracking stopped
