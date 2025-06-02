@@ -1,0 +1,50 @@
+event,label,unix_time
+experiment_start,,1747777425.1297903
+welcome_start,,1747777425.1344523
+welcome_end,,1747777426.4617453
+welcome_start,,1747777426.4668324
+welcome_end,,1747777432.0454383
+faces_shown_start,,1747777432.0515347
+faces_shown_end,,1747777444.6532326
+break_start,,1747777444.6552384
+break_end,,1747777448.3409693
+eyetracking_start,,1747777448.3429747
+visualization_prompt_mark_start,,1747777448.3429747
+visualization_prompt_mark_end,,1747777454.3724868
+landmark_start,nose,1747777454.4196422
+landmark_end,nose,1747777463.9396315
+landmark_start,left eye,1747777463.9695241
+landmark_end,left eye,1747777471.0920587
+landmark_start,right eye,1747777471.1207726
+landmark_end,right eye,1747777474.595853
+landmark_start,mouth,1747777474.6200085
+landmark_end,mouth,1747777479.3145902
+landmark_start,left ear,1747777479.3359327
+landmark_end,left ear,1747777483.4515414
+landmark_start,right ear,1747777483.4864168
+landmark_end,right ear,1747777486.9153395
+landmark_start,chin,1747777486.9518769
+landmark_end,chin,1747777489.6263301
+landmark_start,top of head,1747777489.6693478
+landmark_end,top of head,1747777492.4422646
+visualization_prompt_helly_start,,1747777492.466398
+visualization_prompt_helly_end,,1747777495.7387717
+landmark_start,nose,1747777495.785825
+landmark_end,nose,1747777499.6744804
+landmark_start,left eye,1747777499.70194
+landmark_end,left eye,1747777502.2018766
+landmark_start,right eye,1747777502.235369
+landmark_end,right eye,1747777503.9138901
+landmark_start,mouth,1747777503.9350088
+landmark_end,mouth,1747777506.361514
+landmark_start,left ear,1747777506.3855178
+landmark_end,left ear,1747777509.680985
+landmark_start,right ear,1747777509.702129
+landmark_end,right ear,1747777511.649898
+landmark_start,chin,1747777511.6856532
+landmark_end,chin,1747777513.546023
+landmark_start,top of head,1747777513.5854592
+landmark_end,top of head,1747777516.897311
+experiment_exit_start,,1747777516.932961
+experiment_exit_end,,1747777519.6013598
+experiment_end,,1747777519.609432

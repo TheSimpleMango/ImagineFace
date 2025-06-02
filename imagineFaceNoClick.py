@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from psychopy import core, visual, event, data, gui, logging
+from psychopy import core, visual, event, data, gui, logging, monitors
 import os
 import random
 import time
@@ -10,14 +10,12 @@ import threading
 import csv
 
 # === 1. EXPERIMENT SETUP ===
-
 exp_info = {'participant': ''}
 dlg = gui.DlgFromDict(exp_info, title='Face-Landmark Experiment')
 if not dlg.OK:
     core.quit()
 
 _thisDir = os.path.dirname(os.path.abspath(__file__))
-
 data_dir = os.path.join(_thisDir, 'data')
 os.makedirs(data_dir, exist_ok=True)
 file_base = f"{exp_info['participant']}_faceLandmarks"
@@ -38,30 +36,51 @@ event_log_writer = csv.writer(event_log_file)
 event_log_writer.writerow(['event', 'label', 'unix_time'])
 event_log_file.flush()
 
-def log_event(event, label=''):
+def log_event(event_name, label=''):
     t = time.time()
-    event_log_writer.writerow([event, label, t])
+    event_log_writer.writerow([event_name, label, t])
     event_log_file.flush()
 
+# === MONITOR SETUP ===
+monitor_name = 'default'
+screen_width_cm = 53.0  # Adjust based on your actual monitor width
+screen_distance_cm = 60.0  # Adjust based on your actual viewing distance
+screen_resolution = [1920, 1080]
+
+mon = monitors.Monitor(monitor_name)
+mon.setWidth(screen_width_cm)
+mon.setDistance(screen_distance_cm)
+mon.setSizePix(screen_resolution)
+mon.saveMon()
+
 # === VISUAL WINDOW ===
-
-win = visual.Window(fullscr=True,
-                    allowGUI=False,
-                    color=(0, 0, 0),
-                    units='pix')
-
+win = visual.Window(
+    size=screen_resolution,
+    fullscr=True,
+    monitor=monitor_name,
+    units='pix',
+    color=(0, 0, 0),
+    allowGUI=False,
+    checkTiming=False
+)
 event.globalKeys.add(key='escape', func=core.quit, name='shutdown')
 
-# === 2. EYE TRACKING SETUP ===
+blank = visual.Rect(
+    win,
+    width=win.size[0],
+    height=win.size[1],
+    fillColor='black',
+    lineColor='black'
+)
 
+# === 2. EYE TRACKING SETUP ===
 def tobii_reader(proc, logfile_path, stop_flag):
     with open(logfile_path, 'a') as logfile:
         while not stop_flag['stop']:
             line = proc.stdout.readline()
             if not line:
                 break
-            unix_time = time.time()
-            logfile.write(f"{unix_time}\t{line.strip()}\n")
+            logfile.write(f"{time.time()}\t{line.strip()}\n")
             logfile.flush()
 
 eyetrack_proc = None
@@ -71,11 +90,10 @@ eyetrack_file_path = None
 
 def start_eyetracking(participant_name):
     global eyetrack_proc, eyetrack_thread, eyetrack_stop_flag, eyetrack_file_path
-    date    = time.strftime("%m_%d")
-    expName = 'FaceLandmark'
+    date = time.strftime("%m_%d")
     log_dir = os.path.join(os.getcwd(), 'Data')
     os.makedirs(log_dir, exist_ok=True)
-    file_name = f"{participant_name}_{date}_{expName}_Eye_Tracking.txt"
+    file_name = f"{participant_name}_{date}_FaceLandmark_Eye_Tracking.txt"
     eyetrack_file_path = os.path.join(log_dir, file_name)
 
     with open(eyetrack_file_path, 'a') as logfile:
@@ -97,7 +115,7 @@ def start_eyetracking(participant_name):
     eyetrack_thread.start()
 
 def stop_eyetracking():
-    global eyetrack_proc, eyetrack_thread, eyetrack_stop_flag, eyetrack_file_path
+    global eyetrack_proc, eyetrack_thread, eyetrack_stop_flag
     if eyetrack_proc is not None:
         with open(eyetrack_file_path, 'a') as logfile:
             logfile.write(f"{time.time()}\tEXPERIMENT_MARKER: Eye tracking stopped\n")
@@ -106,121 +124,114 @@ def stop_eyetracking():
             eyetrack_proc.terminate()
         except Exception:
             pass
-        if eyetrack_thread is not None:
+        if eyetrack_thread:
             eyetrack_thread.join(timeout=2)
-        eytrack_proc = None
-        eyetrack_thread = None
 
 # === 3. HELPER FUNCTIONS ===
-
-def show_text(message, event_label=None):
-    if event_label:
-        log_event(f"{event_label}_start")
-    txt = visual.TextStim(win, text=message,
-                          wrapWidth=800, height=24, color='white')
-    txt.draw()
+def show_text(message, label=None):
+    if label:
+        log_event(f"{label}_start")
+    stim = visual.TextStim(win, text=message, wrapWidth=800, height=24, color='white')
+    stim.draw()
     win.flip()
     event.waitKeys(keyList=['space'])
-    if event_label:
-        log_event(f"{event_label}_end")
+    if label:
+        log_event(f"{label}_end")
 
-def show_image_with_caption(image_name, caption_text, event_label=None):
-    if event_label:
-        log_event(f"{event_label}_start")
-    image_path = os.path.join(_thisDir, image_name)
-    if not os.path.isfile(image_path):
-        raise IOError(f"Image not found: {image_path}")
-    img = visual.ImageStim(win, image=image_path, pos=(0,150))
-    caption = visual.TextStim(win, text=caption_text,
-                              pos=(0,-400), height=24,
-                              wrapWidth=800, color='white')
+def show_image_with_caption(fname, caption, label=None):
+    if label:
+        log_event(f"{label}_start")
+    path = os.path.join(_thisDir, fname)
+    if not os.path.isfile(path):
+        raise IOError(f"Image not found: {path}")
+    img = visual.ImageStim(win, image=path, pos=(0,150))
+    cap = visual.TextStim(win, text=caption, pos=(0,-400), height=24, wrapWidth=800, color='white')
     img.draw()
-    caption.draw()
+    cap.draw()
     win.flip()
     event.waitKeys(keyList=['space'])
-    if event_label:
-        log_event(f"{event_label}_end")
+    if label:
+        log_event(f"{label}_end")
 
-def ask_landmarks(landmark_names, chosen_identity):
+def ask_landmarks(names, identity):
     rt_clock = core.Clock()
     rt_clock.reset()
-    for land in landmark_names:
-        log_event('landmark_instruction_start', land)
-        instr = visual.TextStim(win,
-                                text=f"Please look at the {land} and press [space] when ready.",
-                                pos=(0,300), height=24,
-                                wrapWidth=800, color='white')
+    win.flip()
+    for land in names:
+        blank.draw()
+        win.flip()
+        instr = visual.TextStim(
+            win,
+            text=f"Please look at where you imagine their {land} to be and press [space] when you're looking at it.",
+            pos=(0,300), height=24, wrapWidth=800, color='white'
+        )
+        # === LOG SCREEN START ===
+        log_event('landmark_start', land)
         instr.draw()
         win.flip()
         event.waitKeys(keyList=['space'])
-        log_event('landmark_instruction_end', land)
-        question_timestamp = rt_clock.getTime()
-        exp.addData('chosen_identity', chosen_identity)
+        # === LOG SCREEN END ===
+        log_event('landmark_end', land)
+
+        exp.addData('chosen_identity', identity)
         exp.addData('landmark', land)
-        exp.addData('question_time', question_timestamp)
+        exp.addData('question_time', rt_clock.getTime())
         exp.nextEntry()
     win.flip()
 
+
 # === 4. RUN PHASES ===
-
 log_event('experiment_start')
-
-# a) Welcome
-show_text(
-    "Welcome!\n\n"
-    "In this experiment, you'll respond to a series of landmark prompts.\n\n"
-    "Press [space] to begin.",
-    event_label='welcome'
-)
-
-# b) Memorization (faces shown)
-show_image_with_caption(
-    'face3.png',
-    "On the left is Helly and on the right is Mark.\nPlease memorize their faces.",
-    event_label='faces_shown'
-)
-
-# c) Break
-show_text(
-    "You may now take a short break to complete an outside task.\n\n"
-    "Press [space] when ready to continue.",
-    event_label='break'
-)
-
-# d) Visualization prompt
-chosen = random.choice(['Lucia','Mark','Donald'])
-show_text(
-    f"Now, please recall and imagine {chosen}’s face on the screen.\n"
-    "Press [space] when you're ready.",
-    event_label='visualization_prompt'
-)
-
-# e) Landmark questions (start eye tracking here!)
-log_event('eyetracking_start')
 start_eyetracking(exp_info['participant'])
 
-with open(eyetrack_file_path, 'a') as logfile:
-    logfile.write(f"{time.time()}\tEXPERIMENT_MARKER: Landmark questions started\n")
+show_text(
+    "Welcome!\n\nPress [space] to begin.",
+    label='welcome'
+)
+
+show_text(
+    "Welcome!\n\nPress [space] to begin.",
+    label='welcome'
+)
+
+show_image_with_caption(
+    'face.png',
+    "On the left is Helly and on the right is Mark.\nPlease memorize their faces.",
+    label='faces_shown'
+)
+
+show_text(
+    "You may now take a short break.\nPress [space] to continue.",
+    label='break'
+)
+
+log_event('eyetracking_start')
+with open(eyetrack_file_path, 'a') as lf:
+    lf.write(f"{time.time()}\tEXPERIMENT_MARKER: Landmark questions started\n")
 
 landmark_names = [
-    'nose', 'left eye', 'right eye', 'mouth', 'left ear', 'right ear',
-    'chin', 'top of head'
+    'nose','left eye','right eye','mouth',
+    'left ear','right ear','chin','top of head'
 ]
-ask_landmarks(landmark_names, chosen)
 
-# f) Exit prompt
+for identity in ['Mark', 'Helly']:
+    show_text(
+        f"Now, recall and imagine {identity}’s face as if they were right in front of you.\nPress [space] when ready.",
+        label=f'visualization_prompt_{identity.lower()}'
+    )
+    ask_landmarks(landmark_names, identity)
+
 show_text(
     "Press [space] to end the experiment.",
-    event_label='experiment_exit'
+    label='experiment_exit'
 )
 
 log_event('experiment_end')
 
-# g) Save & clean up
+# Save and clean up
 exp.saveAsWideText(exp.dataFileName + '.csv')
 exp.saveAsPickle(exp.dataFileName + '.psydat')
 logging.flush()
-
 stop_eyetracking()
 
 event_log_file.close()

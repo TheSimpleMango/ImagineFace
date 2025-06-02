@@ -1,0 +1,50 @@
+event,label,unix_time
+experiment_start,,1747777855.1502898
+welcome_start,,1747777855.1532936
+welcome_end,,1747777869.7360191
+welcome_start,,1747777869.747111
+welcome_end,,1747777871.4870856
+faces_shown_start,,1747777871.4961648
+faces_shown_end,,1747777898.8702118
+break_start,,1747777898.8773348
+break_end,,1747777901.5423574
+eyetracking_start,,1747777901.5484192
+visualization_prompt_mark_start,,1747777901.5484192
+visualization_prompt_mark_end,,1747777905.438195
+landmark_start,nose,1747777905.4771707
+landmark_end,nose,1747777913.1975856
+landmark_start,left eye,1747777913.2270582
+landmark_end,left eye,1747777917.7333395
+landmark_start,right eye,1747777917.74455
+landmark_end,right eye,1747777920.4126368
+landmark_start,mouth,1747777920.4268084
+landmark_end,mouth,1747777922.4454572
+landmark_start,left ear,1747777922.4777021
+landmark_end,left ear,1747777924.2450385
+landmark_start,right ear,1747777924.276624
+landmark_end,right ear,1747777925.7972264
+landmark_start,chin,1747777925.8270366
+landmark_end,chin,1747777928.0529158
+landmark_start,top of head,1747777928.093173
+landmark_end,top of head,1747777929.7325046
+visualization_prompt_helly_start,,1747777929.7563007
+visualization_prompt_helly_end,,1747777933.1726131
+landmark_start,nose,1747777933.2094288
+landmark_end,nose,1747777934.8207133
+landmark_start,left eye,1747777934.8590355
+landmark_end,left eye,1747777936.0125632
+landmark_start,right eye,1747777936.0430925
+landmark_end,right eye,1747777937.5320954
+landmark_start,mouth,1747777937.5601616
+landmark_end,mouth,1747777939.2120292
+landmark_start,left ear,1747777939.2261448
+landmark_end,left ear,1747777940.8758662
+landmark_start,right ear,1747777940.8925433
+landmark_end,right ear,1747777942.2516341
+landmark_start,chin,1747777942.292398
+landmark_end,chin,1747777943.627437
+landmark_start,top of head,1747777943.6590233
+landmark_end,top of head,1747777944.8438768
+experiment_exit_start,,1747777944.8728392
+experiment_exit_end,,1747777946.043775
+experiment_end,,1747777946.049839

@@ -1,0 +1,50 @@
+event,label,unix_time
+experiment_start,,1747776190.2305007
+welcome_start,,1747776190.2340243
+welcome_end,,1747776191.4286468
+welcome_start,,1747776191.4472704
+welcome_end,,1747776191.92463
+faces_shown_start,,1747776191.9266372
+faces_shown_end,,1747776202.2834308
+break_start,,1747776202.3087254
+break_end,,1747776204.0834556
+eyetracking_start,,1747776204.1024442
+visualization_prompt_mark_start,,1747776204.1024442
+visualization_prompt_mark_end,,1747776206.0440562
+landmark_start,nose,1747776206.0970068
+landmark_end,nose,1747776214.8993406
+landmark_start,left eye,1747776214.931184
+landmark_end,left eye,1747776216.9066205
+landmark_start,right eye,1747776216.9468515
+landmark_end,right eye,1747776218.7066495
+landmark_start,mouth,1747776218.7290165
+landmark_end,mouth,1747776221.4589188
+landmark_start,left ear,1747776221.495643
+landmark_end,left ear,1747776222.8029644
+landmark_start,right ear,1747776222.8464954
+landmark_end,right ear,1747776224.1065483
+landmark_start,chin,1747776224.1460974
+landmark_end,chin,1747776226.354303
+landmark_start,top of head,1747776226.379619
+landmark_end,top of head,1747776227.6102731
+visualization_prompt_helly_start,,1747776227.6429589
+visualization_prompt_helly_end,,1747776228.5380514
+landmark_start,nose,1747776228.5626583
+landmark_end,nose,1747776232.906001
+landmark_start,left eye,1747776232.929285
+landmark_end,left eye,1747776235.3141642
+landmark_start,right eye,1747776235.3462589
+landmark_end,right eye,1747776236.3063455
+landmark_start,mouth,1747776236.3316123
+landmark_end,mouth,1747776237.7705357
+landmark_start,left ear,1747776237.7962148
+landmark_end,left ear,1747776239.1856668
+landmark_start,right ear,1747776239.2119086
+landmark_end,right ear,1747776240.14544
+landmark_start,chin,1747776240.1788156
+landmark_end,chin,1747776242.0011704
+landmark_start,top of head,1747776242.0290723
+landmark_end,top of head,1747776243.0498402
+experiment_exit_start,,1747776243.0937028
+experiment_exit_end,,1747776243.92141
+experiment_end,,1747776243.937618

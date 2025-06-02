@@ -1,0 +1,50 @@
+event,label,unix_time
+experiment_start,,1747777266.4676707
+welcome_start,,1747777266.4706793
+welcome_end,,1747777267.8861573
+welcome_start,,1747777267.9093342
+welcome_end,,1747777273.1101108
+faces_shown_start,,1747777273.1151297
+faces_shown_end,,1747777281.0772362
+break_start,,1747777281.0802443
+break_end,,1747777283.8051765
+eyetracking_start,,1747777283.823371
+visualization_prompt_mark_start,,1747777283.823371
+visualization_prompt_mark_end,,1747777286.9886062
+landmark_start,nose,1747777287.0399675
+landmark_end,nose,1747777292.9327826
+landmark_start,left eye,1747777292.9732726
+landmark_end,left eye,1747777299.2448006
+landmark_start,right eye,1747777299.274031
+landmark_end,right eye,1747777301.8686366
+landmark_start,mouth,1747777301.8899422
+landmark_end,mouth,1747777303.556443
+landmark_start,left ear,1747777303.5896988
+landmark_end,left ear,1747777306.836602
+landmark_start,right ear,1747777306.872942
+landmark_end,right ear,1747777308.5162568
+landmark_start,chin,1747777308.5395882
+landmark_end,chin,1747777310.1315897
+landmark_start,top of head,1747777310.1559422
+landmark_end,top of head,1747777312.49959
+visualization_prompt_helly_start,,1747777312.5203366
+visualization_prompt_helly_end,,1747777314.483812
+landmark_start,nose,1747777314.5230744
+landmark_end,nose,1747777316.8756678
+landmark_start,left eye,1747777316.9050179
+landmark_end,left eye,1747777318.3311365
+landmark_start,right eye,1747777318.355528
+landmark_end,right eye,1747777320.019177
+landmark_start,mouth,1747777320.05541
+landmark_end,mouth,1747777321.0756347
+landmark_start,left ear,1747777321.1063616
+landmark_end,left ear,1747777322.6269755
+landmark_start,right ear,1747777322.6558657
+landmark_end,right ear,1747777323.683574
+landmark_start,chin,1747777323.7227428
+landmark_end,chin,1747777324.7308946
+landmark_start,top of head,1747777324.7553265
+landmark_end,top of head,1747777326.8425965
+experiment_exit_start,,1747777326.853737
+experiment_exit_end,,1747777327.8512285
+experiment_end,,1747777327.852242
