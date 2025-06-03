@@ -9,6 +9,31 @@ import subprocess
 import threading
 import csv
 
+import math
+
+monitor_name = 'default'
+
+# Physical display parameters
+screen_width_cm = 53.0
+screen_height_cm = 30.0
+screen_distance_cm = 100.0  # viewing distance from participant in cm
+screen_resolution = [1920, 1080]  # width x height in pixels
+
+# Derived pixel size (cm/px)
+px_per_cm_vert = screen_resolution[1] / screen_height_cm  # px/cm
+cm_per_px_vert = screen_height_cm / screen_resolution[1]  # cm/px
+
+# Image & face 1 pixel range (editable)
+image_height_px = 1024
+face1_top_px = 106
+face1_bottom_px = 650
+face2_top_px = 246
+face2_bottom_px = 428
+
+# Desired visual angle for face 1
+target_angle_deg = 8.0
+
+
 # === 1. EXPERIMENT SETUP ===
 exp_info = {'participant': ''}
 dlg = gui.DlgFromDict(exp_info, title='Face-Landmark Experiment')
@@ -41,11 +66,6 @@ def log_event(event_name, label=''):
     event_log_writer.writerow([event_name, label, t])
     event_log_file.flush()
 
-# === MONITOR SETUP ===
-monitor_name = 'default'
-screen_width_cm = 53.0  # Adjust based on your actual monitor width
-screen_distance_cm = 60.0  # Adjust based on your actual viewing distance
-screen_resolution = [1920, 1080]
 
 mon = monitors.Monitor(monitor_name)
 mon.setWidth(screen_width_cm)
@@ -72,6 +92,47 @@ blank = visual.Rect(
     fillColor='black',
     lineColor='black'
 )
+
+
+# === FACE LANDMARK REGIONS (EDITABLE) ===
+# Source image resolution
+image_native_res = (1536, 1024)  # width x height
+
+# Face 1 pixel bounds (top to bottom)
+face1_top_px = 106
+face1_bottom_px = 650
+
+# Face 2 pixel bounds (top to bottom)
+face2_top_px = 246
+face2_bottom_px = 428
+
+# Target angle in degrees for face 1
+target_angle_deg = 8.0
+
+# === CALCULATIONS ===
+# Face 1 actual height in px and cm
+face1_height_px = abs(face1_bottom_px - face1_top_px)
+face1_height_cm = face1_height_px * cm_per_px_vert
+
+# Convert height in cm to actual visual angle
+face1_angle_rad = 2 * math.atan2(face1_height_cm / 2, screen_distance_cm)
+face1_angle_deg = math.degrees(face1_angle_rad)
+
+# Compute scaling factor to reach target angle
+scaling_factor = target_angle_deg / face1_angle_deg
+
+# Apply same scaling to face 2 and get its resulting visual angle
+face2_height_px = abs(face2_bottom_px - face2_top_px)
+face2_scaled_px = face2_height_px * scaling_factor
+face2_scaled_cm = face2_scaled_px * cm_per_px_vert
+
+face2_angle_rad = 2 * math.atan2(face2_scaled_cm / 2, screen_distance_cm)
+face2_angle_deg = math.degrees(face2_angle_rad)
+
+# === PRINT RESULTS (Optional) ===
+print(f"[INFO] Face 1: {face1_height_px}px → {face1_angle_deg:.2f}°")
+print(f"[INFO] Scaling factor to match {target_angle_deg}°: {scaling_factor:.3f}")
+print(f"[INFO] Face 2: {face2_height_px}px → {face2_angle_deg:.2f}° (after scaling)")
 
 # === 2. EYE TRACKING SETUP ===
 def tobii_reader(proc, logfile_path, stop_flag):
@@ -144,7 +205,14 @@ def show_image_with_caption(fname, caption, label=None):
     path = os.path.join(_thisDir, fname)
     if not os.path.isfile(path):
         raise IOError(f"Image not found: {path}")
-    img = visual.ImageStim(win, image=path, pos=(0,150))
+    # When showing the image, apply scaling only on the height
+    img = visual.ImageStim(
+        win,
+        image=os.path.join(_thisDir, 'face.png'),
+        pos=(0, 150),
+        size=(image_native_res[0], image_native_res[1] * scaling_factor)
+    )
+
     cap = visual.TextStim(win, text=caption, pos=(0,-400), height=24, wrapWidth=800, color='white')
     img.draw()
     cap.draw()
