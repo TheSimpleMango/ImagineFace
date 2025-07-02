@@ -1,8 +1,0 @@
-1748978981.6347709	EXPERIMENT_MARKER: Eye tracking started
-1748978981.7141585	TobiiStream v2.0.3
-1748978981.7141585	
-1748978981.7552176	SUCCESS: The connection to the GazeTrack Processing library has been correctly set up!
-1748978981.7562206	
-1748978981.806782	TobiiState NotPresent
-1748978994.550919	EXPERIMENT_MARKER: Landmark questions started
-1748979001.0351436	EXPERIMENT_MARKER: Eye tracking stopped

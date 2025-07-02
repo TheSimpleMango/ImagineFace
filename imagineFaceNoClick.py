@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# TODO make all instructions auditory. add questions for memorizing the faces. add three groups big-medium, big-small, medium-small
 
 from psychopy import core, visual, event, data, gui, logging, monitors
 import os
@@ -10,6 +11,60 @@ import threading
 import csv
 
 import math
+
+
+
+from psychopy import sound, core
+from collections import OrderedDict
+
+# === 1. AUDIO MAPPING ===
+audio_files = OrderedDict([
+    ('welcome',                    'welcome.wav'),
+    ('welcome2',                    'welcome.wav'),
+    ('faces_shown',                'faces.wav'),
+    ('break',                      'break.wav'),
+    ('visualization_prompt_mark',  'mark.wav'),
+    ('nose',        'nose.wav'),
+    ('mouth',       'mouth.wav'),
+    ('left eye',    'lefteye.wav'),
+    ('right eye',   'righteye.wav'),
+    ('left ear',    'leftear.wav'),
+    ('right ear',   'rightear.wav'),
+    ('top of head', 'topofhead.wav'),
+    ('chin',        'chin.wav'),
+])
+landmark_audio = OrderedDict([
+    ('visualization_prompt_helly', 'helly.wav'),
+    ('nose2',        'nose.wav'),
+    ('mouth2',       'mouth.wav'),
+    ('left eye2',    'lefteye.wav'),
+    ('right eye2',   'righteye.wav'),
+    ('left ear2',    'leftear.wav'),
+    ('right ear2',   'rightear.wav'),
+    ('top of head2', 'topofhead.wav'),
+    ('chin2',        'chin.wav'),
+    ('experiment_exit2',            'end.wav'),
+])
+
+# Merge into one ordered list
+_all_audio = OrderedDict()
+_all_audio.update(audio_files)
+_all_audio.update(landmark_audio)
+
+# Preload
+_sound_list = [sound.Sound(fname) for fname in _all_audio.values()]
+_index = 0  # keeps track of next sound
+
+def play_next_audio():
+    """Play the next audio in the list; wraps around at the end."""
+    global _index
+    snd = _sound_list[_index]
+    snd.play()
+    core.wait(snd.getDuration())
+    _index = (_index + 1) % len(_sound_list)
+
+
+
 
 monitor_name = 'default'
 
@@ -74,7 +129,7 @@ mon.setSizePix(screen_resolution)
 mon.saveMon()
 
 # === VISUAL WINDOW ===
-win = visual.Window(
+win = visual.Window( 
     size=screen_resolution,
     fullscr=True,
     monitor=monitor_name,
@@ -192,9 +247,10 @@ def stop_eyetracking():
 def show_text(message, label=None):
     if label:
         log_event(f"{label}_start")
-    stim = visual.TextStim(win, text=message, wrapWidth=800, height=24, color='white')
+    stim = visual.TextStim(win, text=' ', wrapWidth=800, height=24, color='white')
     stim.draw()
     win.flip()
+    play_next_audio()
     event.waitKeys(keyList=['space'])
     if label:
         log_event(f"{label}_end")
@@ -213,10 +269,11 @@ def show_image_with_caption(fname, caption, label=None):
         size=(image_native_res[0], image_native_res[1] * scaling_factor)
     )
 
-    cap = visual.TextStim(win, text=caption, pos=(0,-400), height=24, wrapWidth=800, color='white')
+    cap = visual.TextStim(win, text=' ', pos=(0,-400), height=24, wrapWidth=800, color='white')
     img.draw()
     cap.draw()
     win.flip()
+    play_next_audio()
     event.waitKeys(keyList=['space'])
     if label:
         log_event(f"{label}_end")
@@ -230,13 +287,14 @@ def ask_landmarks(names, identity):
         win.flip()
         instr = visual.TextStim(
             win,
-            text=f"Please look at where you imagine their {land} to be and press [space] when you're looking at it.",
+            text=f" ",
             pos=(0,300), height=24, wrapWidth=800, color='white'
         )
         # === LOG SCREEN START ===
         log_event('landmark_start', land)
         instr.draw()
         win.flip()
+        play_next_audio()
         event.waitKeys(keyList=['space'])
         # === LOG SCREEN END ===
         log_event('landmark_end', land)
@@ -284,7 +342,7 @@ landmark_names = [
 
 for identity in ['Mark', 'Helly']:
     show_text(
-        f"Now, recall and imagine {identity}’s face as if they were right in front of you.\nPress [space] when ready.",
+        f"Now,  imagine {identity}’s face.\nPress [space] when ready.",
         label=f'visualization_prompt_{identity.lower()}'
     )
     ask_landmarks(landmark_names, identity)
