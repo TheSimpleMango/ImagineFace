@@ -1,365 +1,242 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# TODO make all instructions auditory. add questions for memorizing the faces. add three groups big-medium, big-small, medium-small
+"""
+Face-Landmark Drawing Experiment
+• Robust Escape via globalKeys
+• Per-phase landmark-by-landmark drawing with persistent strokes
+• Records full drawn-pixel sequences per landmark and phase
+• Single-frame screenshot of each phase’s cumulative drawing
+"""
 
-from psychopy import core, visual, event, data, gui, logging, monitors
 import os
-import random
-import time
-import subprocess
-import threading
+import json
 import csv
-
-import math
-
-
-
-from psychopy import sound, core
 from collections import OrderedDict
+from psychopy import prefs, core, visual, event, data, gui, logging, monitors, sound
 
-# === 1. AUDIO MAPPING ===
+# === Force PTB Audio Backend ===
+prefs.hardware['audioLib'] = ['PTB', 'sounddevice', 'pyo', 'pygame']
+
+# === 0. SETUP & SHUTDOWN ===
+clock = core.Clock()
+exp = None
+sound_dict = {}
+
+def shutdown():
+    """Stop everything cleanly and quit."""
+    logging.flush()
+    for snd in sound_dict.values():
+        try:
+            snd.stop()
+        except Exception:
+            pass
+    try:
+        event_log_file.close()
+    except Exception:
+        pass
+    try:
+        if exp:
+            exp.abort()
+    except Exception:
+        pass
+    try:
+        win.close()
+    except Exception:
+        pass
+    core.quit()
+
+event.globalKeys.add('escape', shutdown, name='shutdown')
+
+# === 1. PATHS & AUDIO MAPPING ===
+_thisDir = os.path.abspath(os.path.dirname(__file__))
+origin_path = __file__ if '__file__' in globals() else None
+
+# phase prompts + standard audio
 audio_files = OrderedDict([
-    ('welcome',                    'welcome.wav'),
-    ('welcome2',                    'welcome.wav'),
-    ('faces_shown',                'faces.wav'),
-    ('break',                      'break.wav'),
-    ('visualization_prompt_mark',  'mark.wav'),
-    ('nose',        'nose.wav'),
-    ('mouth',       'mouth.wav'),
-    ('left eye',    'lefteye.wav'),
-    ('right eye',   'righteye.wav'),
-    ('left ear',    'leftear.wav'),
-    ('right ear',   'rightear.wav'),
-    ('top of head', 'topofhead.wav'),
-    ('chin',        'chin.wav'),
-])
-landmark_audio = OrderedDict([
-    ('visualization_prompt_helly', 'helly.wav'),
-    ('nose2',        'nose.wav'),
-    ('mouth2',       'mouth.wav'),
-    ('left eye2',    'lefteye.wav'),
-    ('right eye2',   'righteye.wav'),
-    ('left ear2',    'leftear.wav'),
-    ('right ear2',   'rightear.wav'),
-    ('top of head2', 'topofhead.wav'),
-    ('chin2',        'chin.wav'),
-    ('experiment_exit2',            'end.wav'),
+    ('welcome',                   'welcome.mp3'),
+    ('faces_shown',               'faces.mp3'),
+    ('break',                     'break.mp3'),
+    ('visualization_prompt_mark', 'markvis.mp3'),
+    ('visualization_prompt_helly','hellyvis.mp3'),
+    ('thank_you',                 'thankyou.mp3'),
 ])
 
-# Merge into one ordered list
+# individual landmark cues
+landmark_audio = OrderedDict([
+    ('nose',     'nose.mp3'),
+    ('mouth',    'mouth.mp3'),
+    ('lefteye',  'lefteye.mp3'),
+    ('righteye', 'righteye.mp3'),
+    ('face',     'face.mp3')
+])
+
+# combine and load
 _all_audio = OrderedDict()
 _all_audio.update(audio_files)
 _all_audio.update(landmark_audio)
+for label, fname in _all_audio.items():
+    path = os.path.join(_thisDir, fname)
+    if not os.path.isfile(path):
+        raise RuntimeError(f"Missing audio file '{fname}' in {_thisDir}")
+    sound_dict[label] = sound.Sound(path, stereo=True)
 
-# Preload
-_sound_list = [sound.Sound(fname) for fname in _all_audio.values()]
-_index = 0  # keeps track of next sound
 
-def play_next_audio():
-    """Play the next audio in the list; wraps around at the end."""
-    global _index
-    snd = _sound_list[_index]
+def play_interruptible(label):
+    """Play audio, allow S to skip audio only, Space to skip and proceed, Escape to quit."""
+    snd = sound_dict[label]
     snd.play()
-    core.wait(snd.getDuration())
-    _index = (_index + 1) % len(_sound_list)
+    event.clearEvents(eventType='keyboard')
+    proceed = False
+    while snd.isPlaying:
+        keys = event.getKeys(keyList=['s', 'space', 'escape'])
+        if 'escape' in keys:
+            shutdown()
+        if 'space' in keys:
+            snd.stop()
+            log_event('sound_skipped', label)
+            proceed = True
+            break
+        if 's' in keys:
+            snd.stop()
+            log_event('sound_skipped', label)
+            break
+        core.wait(0.01)
+    return proceed
 
-
-
-
-monitor_name = 'default'
-
-# Physical display parameters
-screen_width_cm = 53.0
-screen_height_cm = 30.0
-screen_distance_cm = 100.0  # viewing distance from participant in cm
-screen_resolution = [1920, 1080]  # width x height in pixels
-
-# Derived pixel size (cm/px)
-px_per_cm_vert = screen_resolution[1] / screen_height_cm  # px/cm
-cm_per_px_vert = screen_height_cm / screen_resolution[1]  # cm/px
-
-# Image & face 1 pixel range (editable)
-image_height_px = 1024
-face1_top_px = 106
-face1_bottom_px = 650
-face2_top_px = 246
-face2_bottom_px = 428
-
-# Desired visual angle for face 1
-target_angle_deg = 8.0
-
-
-# === 1. EXPERIMENT SETUP ===
+# === 2. EXPERIMENT SETUP ===
 exp_info = {'participant': ''}
-dlg = gui.DlgFromDict(exp_info, title='Face-Landmark Experiment')
+dlg = gui.DlgFromDict(exp_info, title='Face-Landmark Drawing')
 if not dlg.OK:
-    core.quit()
+    shutdown()
 
-_thisDir = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(_thisDir, 'data')
 os.makedirs(data_dir, exist_ok=True)
-file_base = f"{exp_info['participant']}_faceLandmarks"
+file_base = f"{exp_info['participant']}_faceDrawing"
 exp = data.ExperimentHandler(
-    name='FaceSize',
-    version='1.0',
-    extraInfo=exp_info,
-    originPath=__file__,
-    savePickle=True,
-    saveWideText=True,
+    name='FaceDrawing', version='1.0',
+    extraInfo=exp_info, originPath=origin_path,
+    savePickle=True, saveWideText=True,
     dataFileName=os.path.join(data_dir, file_base)
 )
 
-# === EVENT LOGGING SETUP ===
-event_log_path = os.path.join(data_dir, f"{exp_info['participant']}_event_log.csv")
-event_log_file = open(event_log_path, 'w', newline='')
-event_log_writer = csv.writer(event_log_file)
-event_log_writer.writerow(['event', 'label', 'unix_time'])
-event_log_file.flush()
+# === 3. EVENT LOGGING ===
+event_log_file = open(
+    os.path.join(data_dir, f"{exp_info['participant']}_events.csv"),
+    'w', newline=''
+)
+event_log = csv.writer(event_log_file)
+event_log.writerow(['event', 'label', 'time'])
 
 def log_event(event_name, label=''):
-    t = time.time()
-    event_log_writer.writerow([event_name, label, t])
+    event_log.writerow([event_name, label, clock.getTime()])
     event_log_file.flush()
 
+# === 4. MONITOR & DISPLAY SETUP ===
+if 'FaceDrawingMonitor' not in monitors.getAllMonitors():
+    mon = monitors.Monitor('FaceDrawingMonitor')
+    mon.setWidth(53.0)
+    mon.setDistance(100.0)
+    mon.setSizePix([1920, 1080])
+    mon.saveMon()
 
-mon = monitors.Monitor(monitor_name)
-mon.setWidth(screen_width_cm)
-mon.setDistance(screen_distance_cm)
-mon.setSizePix(screen_resolution)
-mon.saveMon()
-
-# === VISUAL WINDOW ===
-win = visual.Window( 
-    size=screen_resolution,
-    fullscr=True,
-    monitor=monitor_name,
-    units='pix',
-    color=(0, 0, 0),
-    allowGUI=False,
-    checkTiming=False
-)
-event.globalKeys.add(key='escape', func=core.quit, name='shutdown')
-
-blank = visual.Rect(
-    win,
-    width=win.size[0],
-    height=win.size[1],
-    fillColor='black',
-    lineColor='black'
+win = visual.Window(
+    size=[1920, 1080], fullscr=True,
+    monitor='FaceDrawingMonitor', units='pix',
+    color=(0, 0, 0), allowGUI=False
 )
 
-
-# === FACE LANDMARK REGIONS (EDITABLE) ===
-# Source image resolution
-image_native_res = (1536, 1024)  # width x height
-
-# Face 1 pixel bounds (top to bottom)
-face1_top_px = 106
-face1_bottom_px = 650
-
-# Face 2 pixel bounds (top to bottom)
-face2_top_px = 246
-face2_bottom_px = 428
-
-# Target angle in degrees for face 1
-target_angle_deg = 8.0
-
-# === CALCULATIONS ===
-# Face 1 actual height in px and cm
-face1_height_px = abs(face1_bottom_px - face1_top_px)
-face1_height_cm = face1_height_px * cm_per_px_vert
-
-# Convert height in cm to actual visual angle
-face1_angle_rad = 2 * math.atan2(face1_height_cm / 2, screen_distance_cm)
-face1_angle_deg = math.degrees(face1_angle_rad)
-
-# Compute scaling factor to reach target angle
-scaling_factor = target_angle_deg / face1_angle_deg
-
-# Apply same scaling to face 2 and get its resulting visual angle
-face2_height_px = abs(face2_bottom_px - face2_top_px)
-face2_scaled_px = face2_height_px * scaling_factor
-face2_scaled_cm = face2_scaled_px * cm_per_px_vert
-
-face2_angle_rad = 2 * math.atan2(face2_scaled_cm / 2, screen_distance_cm)
-face2_angle_deg = math.degrees(face2_angle_rad)
-
-# === PRINT RESULTS (Optional) ===
-print(f"[INFO] Face 1: {face1_height_px}px → {face1_angle_deg:.2f}°")
-print(f"[INFO] Scaling factor to match {target_angle_deg}°: {scaling_factor:.3f}")
-print(f"[INFO] Face 2: {face2_height_px}px → {face2_angle_deg:.2f}° (after scaling)")
-
-# === 2. EYE TRACKING SETUP ===
-def tobii_reader(proc, logfile_path, stop_flag):
-    with open(logfile_path, 'a') as logfile:
-        while not stop_flag['stop']:
-            line = proc.stdout.readline()
-            if not line:
-                break
-            logfile.write(f"{time.time()}\t{line.strip()}\n")
-            logfile.flush()
-
-eyetrack_proc = None
-eyetrack_thread = None
-eyetrack_stop_flag = {'stop': False}
-eyetrack_file_path = None
-
-def start_eyetracking(participant_name):
-    global eyetrack_proc, eyetrack_thread, eyetrack_stop_flag, eyetrack_file_path
-    date = time.strftime("%m_%d")
-    log_dir = os.path.join(os.getcwd(), 'Data')
-    os.makedirs(log_dir, exist_ok=True)
-    file_name = f"{participant_name}_{date}_FaceLandmark_Eye_Tracking.txt"
-    eyetrack_file_path = os.path.join(log_dir, file_name)
-
-    with open(eyetrack_file_path, 'a') as logfile:
-        logfile.write(f"{time.time()}\tEXPERIMENT_MARKER: Eye tracking started\n")
-
-    eyetrack_proc = subprocess.Popen(
-        ['TobiiStream\\TobiiStream.exe'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1
-    )
-    eyetrack_stop_flag = {'stop': False}
-    eyetrack_thread = threading.Thread(
-        target=tobii_reader,
-        args=(eyetrack_proc, eyetrack_file_path, eyetrack_stop_flag),
-        daemon=True
-    )
-    eyetrack_thread.start()
-
-def stop_eyetracking():
-    global eyetrack_proc, eyetrack_thread, eyetrack_stop_flag
-    if eyetrack_proc is not None:
-        with open(eyetrack_file_path, 'a') as logfile:
-            logfile.write(f"{time.time()}\tEXPERIMENT_MARKER: Eye tracking stopped\n")
-        eyetrack_stop_flag['stop'] = True
-        try:
-            eyetrack_proc.terminate()
-        except Exception:
-            pass
-        if eyetrack_thread:
-            eyetrack_thread.join(timeout=2)
-
-# === 3. HELPER FUNCTIONS ===
-def show_text(message, label=None):
-    if label:
-        log_event(f"{label}_start")
-    stim = visual.TextStim(win, text=' ', wrapWidth=800, height=24, color='white')
-    stim.draw()
-    win.flip()
-    play_next_audio()
-    event.waitKeys(keyList=['space'])
-    if label:
-        log_event(f"{label}_end")
-
-def show_image_with_caption(fname, caption, label=None):
-    if label:
-        log_event(f"{label}_start")
-    path = os.path.join(_thisDir, fname)
-    if not os.path.isfile(path):
-        raise IOError(f"Image not found: {path}")
-    # When showing the image, apply scaling only on the height
-    img = visual.ImageStim(
-        win,
-        image=os.path.join(_thisDir, 'face.png'),
-        pos=(0, 150),
-        size=(image_native_res[0], image_native_res[1] * scaling_factor)
-    )
-
-    cap = visual.TextStim(win, text=' ', pos=(0,-400), height=24, wrapWidth=800, color='white')
-    img.draw()
-    cap.draw()
-    win.flip()
-    play_next_audio()
-    event.waitKeys(keyList=['space'])
-    if label:
-        log_event(f"{label}_end")
-
-def ask_landmarks(names, identity):
-    rt_clock = core.Clock()
-    rt_clock.reset()
-    win.flip()
-    for land in names:
-        blank.draw()
-        win.flip()
-        instr = visual.TextStim(
-            win,
-            text=f" ",
-            pos=(0,300), height=24, wrapWidth=800, color='white'
-        )
-        # === LOG SCREEN START ===
-        log_event('landmark_start', land)
-        instr.draw()
-        win.flip()
-        play_next_audio()
+# helper to show text with audio
+def show_text(msg, label):
+    log_event(f"{label}_start", label)
+    stim = visual.TextStim(win, text=msg, wrapWidth=800,
+                           height=24, color='white')
+    stim.draw(); win.flip()
+    proceeded = play_interruptible(label)
+    log_event(f"{label}_audio_end", label)
+    event.clearEvents(eventType='keyboard')
+    if not proceeded:
         event.waitKeys(keyList=['space'])
-        # === LOG SCREEN END ===
-        log_event('landmark_end', land)
+    log_event(f"{label}_end", label)
 
-        exp.addData('chosen_identity', identity)
-        exp.addData('landmark', land)
-        exp.addData('question_time', rt_clock.getTime())
+# helper to show image with audio
+def show_image(fname, caption, label):
+    log_event(f"{label}_start", label)
+    img = visual.ImageStim(win, image=os.path.join(_thisDir, fname))
+    cap = visual.TextStim(win, text=caption, pos=(0, -400),
+                          height=24, wrapWidth=800, color='white')
+    img.draw(); cap.draw(); win.flip()
+    proceeded = play_interruptible(label)
+    log_event(f"{label}_audio_end", label)
+    event.clearEvents(eventType='keyboard')
+    if not proceeded:
+        event.waitKeys(keyList=['space'])
+    log_event(f"{label}_end", label)
+
+# helper for per-landmark drawing with persistent strokes
+def phase_landmark_draw(phase_label, landmarks):
+    log_event(f"{phase_label}_start")
+    event.clearEvents(eventType='keyboard')
+    mouse = event.Mouse(win=win, visible=True)
+    all_strokes = []
+    for lm in landmarks:
+        log_event(f"{phase_label}_{lm}_start", lm)
+        play_interruptible(lm)
+        log_event(f"{phase_label}_{lm}_audio_end", lm)
+        pts = []
+        drawing = True
+        while drawing:
+            if mouse.getPressed()[0]:
+                x, y = mouse.getPos(); pts.append((float(x), float(y)))
+            for stroke in all_strokes:
+                for i in range(1, len(stroke)):
+                    visual.Line(win, start=stroke[i-1], end=stroke[i],
+                                lineColor='white', lineWidth=3).draw()
+            for i in range(1, len(pts)):
+                visual.Line(win, start=pts[i-1], end=pts[i],
+                            lineColor='white', lineWidth=3).draw()
+            win.flip()
+            if 'space' in event.getKeys(['space']):
+                drawing = False
+        log_event(f"{phase_label}_{lm}_end", lm)
+        all_strokes.append(pts)
+        exp.addData('phase', phase_label)
+        exp.addData('landmark', lm)
+        exp.addData('drawn_pixels', json.dumps(pts))
         exp.nextEntry()
-    win.flip()
+    log_event(f"{phase_label}_end")
+    return all_strokes
 
-
-# === 4. RUN PHASES ===
+# === 5. RUN EXPERIMENT ===
 log_event('experiment_start')
-start_eyetracking(exp_info['participant'])
 
-show_text(
-    "Welcome!\n\nPress [space] to begin.",
-    label='welcome'
-)
+show_text(" ", 'welcome')
+show_image('room_with_people.png', " ", 'faces_shown')
+show_text("Take a short break.\nPress [space] to continue.", 'break')
+win.flip()
 
-show_text(
-    "Welcome!\n\nPress [space] to begin.",
-    label='welcome'
-)
+landmarks = list(landmark_audio.keys())
+# MARK phase
+play_interruptible('visualization_prompt_mark')
+mark_strokes = phase_landmark_draw('mark', landmarks)
+win.getMovieFrame()
+mark_file = os.path.join(data_dir, f"{exp_info['participant']}_mark.png")
+win.saveMovieFrames(mark_file)
+win.flip()
 
-show_image_with_caption(
-    'face.png',
-    "On the left is Helly and on the right is Mark.\nPlease memorize their faces.",
-    label='faces_shown'
-)
+# HELLY phase
+play_interruptible('visualization_prompt_helly')
+helly_strokes = phase_landmark_draw('helly', landmarks)
+win.getMovieFrame()
+helly_file = os.path.join(data_dir, f"{exp_info['participant']}_helly.png")
+win.saveMovieFrames(helly_file)
 
-show_text(
-    "You may now take a short break.\nPress [space] to continue.",
-    label='break'
-)
+# final thank-you
+show_text("Thank you for participating!\nPress [space] to exit.", 'thank_you')
 
-log_event('eyetracking_start')
-with open(eyetrack_file_path, 'a') as lf:
-    lf.write(f"{time.time()}\tEXPERIMENT_MARKER: Landmark questions started\n")
-
-landmark_names = [
-    'nose','left eye','right eye','mouth',
-    'left ear','right ear','chin','top of head'
-]
-
-for identity in ['Mark', 'Helly']:
-    show_text(
-        f"Now,  imagine {identity}’s face.\nPress [space] when ready.",
-        label=f'visualization_prompt_{identity.lower()}'
-    )
-    ask_landmarks(landmark_names, identity)
-
-show_text(
-    "Press [space] to end the experiment.",
-    label='experiment_exit'
-)
-
+# === 6. CLEANUP & SAVE ===
+exp.saveAsWideText(os.path.join(data_dir, file_base + '.csv'))
+exp.saveAsPickle(os.path.join(data_dir, file_base + '.psydat'))
 log_event('experiment_end')
-
-# Save and clean up
-exp.saveAsWideText(exp.dataFileName + '.csv')
-exp.saveAsPickle(exp.dataFileName + '.psydat')
-logging.flush()
-stop_eyetracking()
-
 event_log_file.close()
 core.wait(0.5)
 win.close()
