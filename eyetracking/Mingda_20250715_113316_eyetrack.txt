@@ -1,0 +1,14 @@
+1752604396.5019224	EYE_TRACK_START
+1752604398.3255296	TobiiStream v2.0.3
+1752604398.3255296	
+1752604399.267103	SUCCESS: The connection to the GazeTrack Processing library has been correctly set up!
+1752604399.267103	
+1752604399.4154854	
+1752604399.4391437	Unhandled Exception: System.InvalidOperationException: Cannot read keys when either application does not have a console or when console input has been redirected from a file. Try Console.Read.
+1752604399.4391437	at System.Console.ReadKey(Boolean intercept)
+1752604399.4391437	at TobiiStream.Program.Main(String[] args) in C:\Users\Augusto\Documents\gazetrack\TobiiStream\TobiiStream\Program.cs:line 78
+1752604399.4403176	TobiiState Present
+1752604399.4848506	TobiiState Unknown
+1752604399.4863002	Make sure the Tobii eye-tracker is connected to the computer, and that the Tobii software is running!
+1752604399.4863002	
+1752604399.5538487	TobiiState Present
