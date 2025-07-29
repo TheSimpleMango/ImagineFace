@@ -84,7 +84,6 @@ for label, fname in _all_audio.items():
     if not os.path.isfile(path):
         raise RuntimeError(f"Missing audio file '{fname}' in {_thisDir}")
     sound_dict[label] = sound.Sound(path, stereo=True)
-
 # === 2. EYE TRACKING SETUP ===
 def tobii_reader(proc, logfile_path, stop_flag):
     with open(logfile_path, 'a') as logfile:
@@ -96,39 +95,61 @@ def tobii_reader(proc, logfile_path, stop_flag):
             logfile.flush()
 
 def start_eyetracking(participant_name):
+    """Try to launch TobiiStream; if it fails, just log and continue."""
     global eyetrack_proc, eyetrack_thread, eyetrack_stop_flag, eyetrack_file_path
-    now = time.strftime("%Y%m%d_%H%M%S")
-    log_dir = os.path.join(_thisDir, 'eyetracking')
-    os.makedirs(log_dir, exist_ok=True)
-    eyetrack_file_path = os.path.join(log_dir, f"{participant_name}_{now}_eyetrack.txt")
-    with open(eyetrack_file_path, 'a') as lf:
-        lf.write(f"{time.time()}\tEYE_TRACK_START\n")
     try:
-        eyetrack_proc = subprocess.Popen([
-            'TobiiStream\\TobiiStream.exe'
-        ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        now = time.strftime("%Y%m%d_%H%M%S")
+        log_dir = os.path.join(_thisDir, 'eyetracking')
+        os.makedirs(log_dir, exist_ok=True)
+        eyetrack_file_path = os.path.join(log_dir, f"{participant_name}_{now}_eyetrack.txt")
+        with open(eyetrack_file_path, 'a') as lf:
+            lf.write(f"{time.time()}\tEYE_TRACK_START\n")
+
+        # launch the Tobii stream
+        eyetrack_proc = subprocess.Popen(
+            ['TobiiStream\\TobiiStream.exe'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+
+        eyetrack_stop_flag = {'stop': False}
+        eyetrack_thread = threading.Thread(
+            target=tobii_reader,
+            args=(eyetrack_proc, eyetrack_file_path, eyetrack_stop_flag),
+            daemon=True
+        )
+        eyetrack_thread.start()
+
     except FileNotFoundError:
-        logging.error("TobiiStream.exe not found; skipping eye tracking.")
-        return
-    eyetrack_stop_flag = {'stop': False}
-    eyetrack_thread = threading.Thread(
-        target=tobii_reader,
-        args=(eyetrack_proc, eyetrack_file_path, eyetrack_stop_flag),
-        daemon=True
-    )
-    eyetrack_thread.start()
+        logging.warning("TobiiStream.exe not found; eye tracking disabled.")
+        eyetrack_proc = None
+        eyetrack_thread = None
+
+    except Exception as e:
+        logging.warning(f"Eye tracking setup failed ({e}); continuing without it.")
+        eyetrack_proc = None
+        eyetrack_thread = None
 
 def stop_eyetracking():
+    """Terminate TobiiStream if it was started; otherwise do nothing."""
     global eyetrack_proc, eyetrack_thread, eyetrack_stop_flag
-    if eyetrack_proc:
+    if not eyetrack_proc:
+        return
+    try:
         with open(eyetrack_file_path, 'a') as lf:
             lf.write(f"{time.time()}\tEYE_TRACK_STOP\n")
         eyetrack_stop_flag['stop'] = True
-        try:
-            eyetrack_proc.terminate()
-        except:
-            pass
+        eyetrack_proc.terminate()
         eyetrack_thread.join(timeout=2)
+    except Exception:
+        # if anything goes wrong in shutdown, just ignore
+        pass
+    finally:
+        eyetrack_proc = None
+        eyetrack_thread = None
+
 
 # === 3. EXPERIMENT SETUP ===
 exp_info = {'participant': ''}

@@ -1,0 +1,3 @@
+identity,nose_x_px,nose_y_px,ellipse_w_px,ellipse_h_px,lefteye_x_px,lefteye_y_px,righteye_x_px,righteye_y_px,mouth_x_px,mouth_y_px,ellipse_w_cm,ellipse_h_cm,ellipse_w_deg,ellipse_h_deg
+Mark,7.0,94.0,248.0,298.0,-42.0,131.0,50.0,134.0,5.0,18.0,6.862785779318702,8.246411944503924,7.85186180615345,9.428358643393736
+Helly,6.0,78.0,226.0,278.0,-45.0,134.0,53.0,135.0,4.0,7.0,6.253990266637204,7.692961478429835,7.157223455563483,8.79815548636576

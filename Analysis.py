@@ -3,13 +3,14 @@
 """
 analysis_allParticipants.py
 
-Automatically finds all “*_coordinates.csv” files in the `data/` folder and,
+Automatically finds all “*_coordinates.csv” files in the `data/` folder (one per subfolder) and,
 for each participant:
   1. Computes ellipse width/height in cm & deg
   2. Prints face dimensions (cm) & angular size (deg)
-  3. Prints the rest of the computed values
+  3. Prints the rest of the computed values (including raw landmark px)
   4. Prints a per‐identity summary
   5. Saves both the full trial table and summary to CSVs
+Finally, it combines all participant summaries into a single CSV.
 
 Assumptions:
   • screen resolution: 1920×1080 px
@@ -17,6 +18,8 @@ Assumptions:
   • viewing distance: 0.5 m
   • PsychoPy “pix” units centered at (0,0)
 """
+# TODO x and y of nose location in eccentricity also images if possible
+# TODO instructions on installing psychopy and tobii software
 
 import os
 import glob
@@ -38,24 +41,33 @@ pix2cm_x    = width_cm  / RES_X
 pix2cm_y    = height_cm / RES_Y
 dist_cm     = VIEW_DIST_M * 100
 
-# 3. FIND ALL COORDINATES FILES
+# 3. FIND ALL COORDINATES FILES (each in its own subfolder)
 data_dir    = 'data'
-pattern     = os.path.join(data_dir, '*_coordinates.csv')
+pattern     = os.path.join(data_dir, '*', '*_coordinates.csv')
 coord_files = glob.glob(pattern)
 if not coord_files:
     raise RuntimeError(f"No files matching {pattern}")
+
+# Container for all summaries
+all_summaries = []
 
 # 4. PROCESS EACH PARTICIPANT
 for coords_path in coord_files:
     participant = os.path.basename(coords_path).replace('_coordinates.csv', '')
     df = pd.read_csv(coords_path)
 
-    # rename to standard names
+    # --- Rename to standard px columns ---
     df = df.rename(columns={
-        'ellipse_width':  'ellipse_w_px',
-        'ellipse_height': 'ellipse_h_px',
-        'nose_x':         'nose_x_px',   # still kept if you want raw px later
-        'nose_y':         'nose_y_px'
+        'ellipse_w':    'ellipse_w_px',
+        'ellipse_h':    'ellipse_h_px',
+        'nose_x':       'nose_x_px',
+        'nose_y':       'nose_y_px',
+        'lefteye_x':    'lefteye_x_px',
+        'lefteye_y':    'lefteye_y_px',
+        'righteye_x':   'righteye_x_px',
+        'righteye_y':   'righteye_y_px',
+        'mouth_x':      'mouth_x_px',
+        'mouth_y':      'mouth_y_px',
     })
 
     # px → cm for ellipse
@@ -77,34 +89,47 @@ for coords_path in coord_files:
     # face dims (cm) & face angular size (deg)
     face_cols = [
         'identity',
-        'ellipse_w_cm','ellipse_h_cm',
-        'ellipse_w_deg','ellipse_h_deg'
+        'ellipse_w_cm', 'ellipse_h_cm',
+        'ellipse_w_deg', 'ellipse_h_deg'
     ]
     print("\n-- Face dimensions (cm) & angular size (deg) --")
     print(df[face_cols].to_string(index=False))
 
-    # rest of computed columns
+    # rest of computed columns (including raw px landmarks)
     other_cols = [c for c in df.columns if c not in face_cols]
-    print("\n-- Other computed values --")
+    print("\n-- Other computed & raw values --")
     print(df[other_cols].to_string(index=False))
 
     # per-identity summary
-    summary = df[[
-        'identity',
-        'ellipse_w_cm','ellipse_h_cm',
-        'ellipse_w_deg','ellipse_h_deg'
-    ]].groupby('identity').mean().round(2)
+    summary = (
+        df[face_cols]
+        .groupby('identity')
+        .mean()
+        .round(2)
+        .reset_index()
+    )
+    # tag with participant
+    summary.insert(0, 'participant', participant)
 
     print("\n-- Mean values by identity --")
-    print(summary)
+    print(summary.to_string(index=False))
 
-    # save outputs
+    # save individual CSVs
     full_csv    = os.path.join(data_dir, f"analysis_{participant}_full.csv")
     summary_csv = os.path.join(data_dir, f"analysis_{participant}_summary.csv")
-
     df.to_csv(full_csv, index=False)
-    summary.to_csv(summary_csv)
+    summary.to_csv(summary_csv, index=False)
     print(f"\nSaved full table   → {full_csv}")
     print(f"Saved summary table→ {summary_csv}")
 
-print("\nAll participants processed.\n")
+    # collect for combined table
+    all_summaries.append(summary)
+
+# 5. COMBINE ALL SUMMARIES
+combined = pd.concat(all_summaries, ignore_index=True)
+combined_csv = os.path.join(data_dir, 'analysis_allParticipants_summary_combined.csv')
+combined.to_csv(combined_csv, index=False)
+
+print("\n=== Combined Summary Across All Participants ===")
+print(combined.to_string(index=False))
+print(f"\nSaved combined summary → {combined_csv}\n")
