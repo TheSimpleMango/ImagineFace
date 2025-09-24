@@ -20,13 +20,18 @@ import time
 import subprocess
 import threading
 from collections import OrderedDict
-from psychopy import prefs, core, visual, event, data, gui, logging, monitors, sound
+
+# --- Set PsychoPy audio prefs BEFORE importing psychopy.sound ---
+from psychopy import prefs
+prefs.general['syncTests'] = []  # disable sync tests
+# sounddevice removed -> prefer PTB, then pyo, then pygame
+prefs.hardware['audioLib'] = ['PTB', 'pyo', 'pygame']
+
+# Now it’s safe to import the rest of PsychoPy, including sound
+from psychopy import core, visual, event, data, gui, logging, monitors, sound
 from psychopy.hardware import keyboard
 
 # === 0. SETUP & SHUTDOWN ===
-prefs.general['syncTests'] = []  # disable sync tests
-prefs.hardware['audioLib'] = ['PTB', 'sounddevice', 'pyo', 'pygame']  # force PTB audio
-
 clock = core.Clock()
 exp = None
 sound_dict = {}
@@ -42,16 +47,16 @@ def shutdown():
     for snd in sound_dict.values():
         try:
             snd.stop()
-        except:
+        except Exception:
             pass
     try:
         exp.abort()
-    except:
+    except Exception:
         pass
     stop_eyetracking()
     try:
         win.close()
-    except:
+    except Exception:
         pass
     core.quit()
 
@@ -79,11 +84,15 @@ landmark_audio = OrderedDict([
 _all_audio = OrderedDict()
 _all_audio.update(audio_files)
 _all_audio.update(landmark_audio)
+
+# Build sound objects
 for label, fname in _all_audio.items():
     path = os.path.join(_thisDir, fname)
     if not os.path.isfile(path):
         raise RuntimeError(f"Missing audio file '{fname}' in {_thisDir}")
+    # With prefs set above, this will use PTB first, then pyo/pygame as fallback
     sound_dict[label] = sound.Sound(path, stereo=True)
+
 # === 2. EYE TRACKING SETUP ===
 def tobii_reader(proc, logfile_path, stop_flag):
     with open(logfile_path, 'a') as logfile:
@@ -149,7 +158,6 @@ def stop_eyetracking():
     finally:
         eyetrack_proc = None
         eyetrack_thread = None
-
 
 # === 3. EXPERIMENT SETUP ===
 exp_info = {'participant': ''}

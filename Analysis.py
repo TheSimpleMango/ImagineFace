@@ -27,8 +27,11 @@ import numpy as np
 import pandas as pd
 
 # 1. SCREEN PARAMETERS
-RES_X, RES_Y    = 1920, 1080           # px
-DIAG_INCH       = 24.0                 # inches
+# RES_X, RES_Y    = 1920, 1080           # px
+# DIAG_INCH       = 24.0                 # inches
+# VIEW_DIST_M     = 0.5                  # meters
+RES_X, RES_Y    = 2880, 2800           # px
+DIAG_INCH       = 15.4                 # inches
 VIEW_DIST_M     = 0.5                  # meters
 
 # 2. PIXELS → CM / DISTANCE IN CM
