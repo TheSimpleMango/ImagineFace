@@ -13,6 +13,8 @@ Sections:
 6.  Run Experiment Flow
 7.  Cleanup & Save
 """
+# TODO automatic screen size calculation and saving for analysis on different screens
+# TODO has to press spacebar to end audio?
 
 import os
 import csv
@@ -67,19 +69,19 @@ event.globalKeys.add('escape', shutdown, name='shutdown')
 _thisDir = os.path.abspath(os.path.dirname(__file__))
 
 audio_files = OrderedDict([
-    ('welcome', 'Welcome.mp3'),
-    ('faces_shown', 'Faces.mp3'),
-    ('break', 'Break.mp3'),
-    ('visualization_prompt_mark', 'Mark.mp3'),
-    ('visualization_prompt_helly', 'Helly.mp3'),
-    ('thank_you', 'End.mp3'),
+    ('welcome', 'Welcome.wav'),
+    ('faces_shown', 'Faces.wav'),
+    ('break', 'Break.wav'),
+    ('visualization_prompt_mark', 'Mark.wav'),
+    ('visualization_prompt_helly', 'Helly.wav'),
+    ('thank_you', 'End.wav'),
 ])
 landmark_audio = OrderedDict([
-    ('nose', 'Nose.mp3'),
-    ('lefteye', 'Left Eye.mp3'),
-    ('righteye', 'Right Eye.mp3'),
-    ('mouth', 'Mouth.mp3'),
-    ('face', 'Face.mp3'),
+    ('nose', 'Nose.wav'),
+    ('lefteye', 'Left Eye.wav'),
+    ('righteye', 'Right Eye.wav'),
+    ('mouth', 'Mouth.wav'),
+    ('face', 'Face.wav'),
 ])
 _all_audio = OrderedDict()
 _all_audio.update(audio_files)
