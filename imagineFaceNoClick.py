@@ -21,6 +21,8 @@ import csv
 import time
 import subprocess
 import threading
+import platform
+import json
 from collections import OrderedDict
 
 # --- Set PsychoPy audio prefs BEFORE importing psychopy.sound ---
@@ -30,6 +32,7 @@ prefs.general['syncTests'] = []  # disable sync tests
 prefs.hardware['audioLib'] = ['PTB', 'pyo', 'pygame']
 
 # Now it’s safe to import the rest of PsychoPy, including sound
+import psychopy
 from psychopy import core, visual, event, data, gui, logging, monitors, sound
 from psychopy.hardware import keyboard
 
@@ -68,6 +71,10 @@ event.globalKeys.add('escape', shutdown, name='shutdown')
 # === 1. PATHS & AUDIO MAPPING ===
 _thisDir = os.path.abspath(os.path.dirname(__file__))
 
+# Media folder paths
+audio_dir = os.path.join(_thisDir, 'media', 'audio')
+image_dir = os.path.join(_thisDir, 'media', 'images')
+
 audio_files = OrderedDict([
     ('welcome', 'Welcome.wav'),
     ('faces_shown', 'Faces.wav'),
@@ -89,9 +96,9 @@ _all_audio.update(landmark_audio)
 
 # Build sound objects
 for label, fname in _all_audio.items():
-    path = os.path.join(_thisDir, fname)
+    path = os.path.join(audio_dir, fname)
     if not os.path.isfile(path):
-        raise RuntimeError(f"Missing audio file '{fname}' in {_thisDir}")
+        raise RuntimeError(f"Missing audio file '{fname}' in {audio_dir}")
     # With prefs set above, this will use PTB first, then pyo/pygame as fallback
     sound_dict[label] = sound.Sound(path, stereo=True)
 
@@ -105,14 +112,13 @@ def tobii_reader(proc, logfile_path, stop_flag):
             logfile.write(f"{time.time()}\t{line.strip()}\n")
             logfile.flush()
 
-def start_eyetracking(participant_name):
+def start_eyetracking(participant_name, participant_dir):
     """Try to launch TobiiStream; if it fails, just log and continue."""
     global eyetrack_proc, eyetrack_thread, eyetrack_stop_flag, eyetrack_file_path
     try:
         now = time.strftime("%Y%m%d_%H%M%S")
-        log_dir = os.path.join(_thisDir, 'eyetracking')
-        os.makedirs(log_dir, exist_ok=True)
-        eyetrack_file_path = os.path.join(log_dir, f"{participant_name}_{now}_eyetrack.txt")
+        # Save eye tracking file in participant folder
+        eyetrack_file_path = os.path.join(participant_dir, f"{participant_name}_{now}_eyetrack.txt")
         with open(eyetrack_file_path, 'a') as lf:
             lf.write(f"{time.time()}\tEYE_TRACK_START\n")
 
@@ -199,6 +205,33 @@ win = visual.Window(size=[1920,1080], fullscr=True, monitor='FaceDrawingMonitor'
 win.winHandle.activate()
 kb = keyboard.Keyboard()
 
+# Collect and save hardware specs
+hardware_specs = {
+    'platform': platform.platform(),
+    'system': platform.system(),
+    'release': platform.release(),
+    'version': platform.version(),
+    'machine': platform.machine(),
+    'processor': platform.processor(),
+    'python_version': platform.python_version(),
+    'psychopy_version': psychopy.__version__,
+    'monitor': {
+        'name': 'FaceDrawingMonitor',
+        'width_cm': 53.0,
+        'distance_cm': 100.0,
+        'resolution': [1920, 1080],
+        'window_size': [int(x) for x in win.size],
+        'fullscreen': bool(win.fullscr),
+        'units': str(win.units)
+    },
+    'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
+    'experiment_version': '1.0'
+}
+
+# Save hardware specs to participant folder
+with open(os.path.join(participant_dir, f"{exp_info['participant']}_hardware_specs.json"), 'w') as f:
+    json.dump(hardware_specs, f, indent=2)
+
 # === 5. HELPERS ===
 def play_interruptible(label):
     """Play audio; space skips & proceeds, 's' skips, 'escape' aborts."""
@@ -232,7 +265,7 @@ def show_text(msg, label):
 
 def show_image(fname, caption, label):
     log_event(f"{label}_start", label)
-    img = visual.ImageStim(win, image=os.path.join(_thisDir, fname))
+    img = visual.ImageStim(win, image=os.path.join(image_dir, fname))
     cap = visual.TextStim(win, text=caption, pos=(0,-400), height=24, wrapWidth=800, color='white')
     img.draw(); cap.draw()
     win.flip()
@@ -302,7 +335,7 @@ def draw_landmarks_and_ellipse(identity):
     exp.nextEntry()
 
 # === 6. RUN EXPERIMENT ===
-log_event('experiment_start'); start_eyetracking(exp_info['participant'])
+log_event('experiment_start'); start_eyetracking(exp_info['participant'], participant_dir)
 show_text(" ", 'welcome'); show_image('room_with_people.png', " ", 'faces_shown')
 show_text("Take a short break.\nPress [space] to continue.", 'break'); win.flip()
 show_text(" ", 'visualization_prompt_mark'); draw_landmarks_and_ellipse('Mark')

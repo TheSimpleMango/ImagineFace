@@ -14,14 +14,16 @@ and shift Mark to the left by a fixed pixel offset.
 """
 
 import math
+import os
 from PIL import Image
 
 # === USER PARAMETERS ===
 # Paths
-BG_PATH       = 'room.png'
-P1_PATH       = 'marki.png'    # Mark → will be on the right initially
-P2_PATH       = 'hellyi.png'   # Helly → will be on the left
-OUTPUT_PATH   = 'room_with_people.png'
+media_dir = os.path.join(os.path.dirname(__file__), 'media', 'images')
+BG_PATH       = os.path.join(media_dir, 'room.png')
+P1_PATH       = os.path.join(media_dir, 'marki.png')    # Mark → will be on the right initially
+P2_PATH       = os.path.join(media_dir, 'hellyi.png')   # Helly → will be on the left
+OUTPUT_PATH   = os.path.join(media_dir, 'room_with_people.png')
 
 # Face bounds in source images (Y-pixels)
 FACE1_TOP     = 100   # Mark

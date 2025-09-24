@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(for:*)",
+      "Bash(echo \"Moved $eyefile\")",
+      "Bash(done)",
+      "Bash(python:*)",
+      "Bash(cat:*)",
+      "Bash(do if [ ! -f \"$dir\"/*_hardware_specs.json ])",
+      "Bash(then echo \"No hardware specs in: $dir\")",
+      "Bash(fi)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
